@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: config-service
+  profiles:
+    active: vault
+  cloud:
+    config:
+      server:
+        vault:
+          host: localhost
+          port: 8200
+          scheme: http
+          kvVersion: 2
+          backend: application
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8081/eureka/

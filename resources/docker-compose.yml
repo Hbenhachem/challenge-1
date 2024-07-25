@@ -1,0 +1,77 @@
+version: "3.8"
+services:
+  postgresdb:
+    container_name: postgresdb
+    image: postgres:${PSQL_TAG}
+    deploy:
+      resources:
+        limits:
+          cpus: 0.50
+          memory: 78M
+    env_file: 
+      - ./.env   
+    volumes:
+      - ./db/storage/:/var/lib/postgresql/data/
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "${PSQL_DB_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PSQL_DB_USERNAME}"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+    environment:
+      - POSTGRES_USER=${PSQL_DB_USERNAME}
+      - POSTGRES_PASSWORD=${PSQL_DB_PASSWORD}
+    networks:
+    - signetwork
+
+
+  vault-server:
+    image: vault:1.13.3
+    deploy:
+      resources:
+        limits:
+          cpus: 0.50
+          memory: 75M
+    container_name: vault
+    ports:
+      - "${VAULT_PORT}:8200"
+    environment:
+      VAULT_ADDR: "http://0.0.0.0:${VAULT_PORT}"
+      VAULT_DEV_ROOT_TOKEN_ID: "vault-plaintext-root-token"
+    volumes:
+        - ./vault/config:/vault/config
+        - ./vault/file:/vault/file
+    cap_add:
+      - IPC_LOCK
+    command: vault server -config=/vault/config/vault.json  
+    networks:
+      - signetwork
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    deploy:
+      resources:
+        limits:
+          cpus: 0.50
+          memory: 78M
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USERNAME}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"  
+        
+volumes:
+  es_data:
+    driver: local
+  minio_data:
+
+networks: 
+  signetwork: 
+    name: signetwork
